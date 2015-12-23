@@ -111,8 +111,13 @@ Set parameters similar to the following at the bottom of the /var/lib/pgsql/9.4/
     lc_numeric = 'en_US.UTF-8'
     lc_time = 'en_US.UTF-8'
     default_text_search_config = 'pg_catalog.english'
+		shared_preload_libraries = 'repmgr_funcs'
 
 Use http://pgtune.leopard.in.ua/ to tune PG to your connection and hardware needs.
+
+After making these changes.
+
+    sudo systemctl restart postgresql-9.4
 
 ### ship_logs.sh
 
@@ -155,4 +160,102 @@ Create the ship_logs.sh script for shipping WAL files off to the slave.
         log_error "Transfer failed $wal_file."
       fi
     fi
+
+### repmgr.conf
+
+Create the following file to configure the repmgr: /var/lib/postgres/repmgr/repmgr.conf
+
+    cluster=pg_cluster
+		node=1
+		node_name=pgnode1
+		conninfo='host=pgnode1 user=repmgr dbname=repmgr'
+		pg_bindir=/usr/pgsql-9.4/bin/
+		master_response_timeout=5
+		reconnect_attempts=2
+		reconnect_interval=2
+		failover=manual
+		promote_command='/usr/pgsql-9.4/bin/repmgr standby promote -f /var/lib/postgres/repmgr/repmgr.conf'
+		follow_command='/usr/pgsql-9.4/bin/repmgr standby follow -f /var/lib/postgres/repmgr/repmgr.conf'
+
+Change ownership of the file to postgres
+
+    sudo chown -R postgres.postgres /var/lib/postgres/repmgr/
+
+### Configure firewall
+
+These commands will need to be executed on both pg nodes.
+
+    sudo firewall-cmd --permanent --zone=public --add-service=postgresql
+		sudo systemctl reload firewalld
+
+### Create required database users
+
+
+    sudo -i
+		su postgres -
+		psql
+		postgres# CREATE ROLE repmgr SUPERUSER LOGIN ENCRYPTED PASSWORD 'password';
+		postgres# CREATE DATABASE repmgr OWNER repmgr;
+
+### Register the master node
+
+We need to tell repmgr that pgnode1 is the master node currently.
+
+    sudo -i
+		su postgres -
+		/usr/pgsql-9.4/bin/repmgr -f /var/lib/postgres/repmgr/repmgr.conf master register
+
+You should see a info message similar to this.
+
+    [Notice] master node correctly registered for cluster pg_cluster with id 1 (conninfo host=pgnode1 user=repmgr dbname=repmgr)
+
+
+## The Slave Node
+
+PG software should be installed. Postgres user should have password less ssh access to the master (pgnode1). Configure the firewall as you did on the master.
+
+### Sync the Slave with the Master
+
+We need to pull the data from the Master so that the slave can follow WAL segments updates.
+
+    sudo -i
+		su postgres -
+		rm -rf /var/lib/pgsql/9.4/data/*
+		/usr/pgsql-9.4/bin/repmgr -D /var/lib/pgsql/9.4/data -d repmgr -p 5432 -U repmgr -R postgres standby clone pgnode1
+
+This step should finish with a message similar to:
+
+    [NOTICE] repmgr standby clone complete
+
+If you need to repeat this step due to errors. Delete the files in the PGDATA dir and try again.
+
+### repmgr.conf
+
+Create the following file to configure the repmgr: /var/lib/postgres/repmgr/repmgr.conf
+
+    cluster=pg_cluster
+		node=2
+		node_name=pgnode2
+		conninfo='host=pgnode2 user=repmgr dbname=repmgr'
+		pg_bindir=/usr/pgsql-9.4/bin/
+		master_response_timeout=5
+		reconnect_attempts=2
+		reconnect_interval=2
+		failover=manual
+		promote_command='/usr/pgsql-9.4/bin/repmgr standby promote -f /var/lib/postgres/repmgr/repmgr.conf'
+		follow_command='/usr/pgsql-9.4/bin/repmgr standby follow -f /var/lib/postgres/repmgr/repmgr.conf'
+
+Change ownership of the file to postgres
+
+    sudo chown -R postgres.postgres /var/lib/postgres/repmgr/
+
+### Register the slave with repmgr
+
+    sudo -i
+		su postgres -
+		/usr/pgsql-9.4/bin/repmgr -f /var/lib/postgres/repmgr/repmgr.conf standby register
+
+The above command should output a message similar to:
+
+    [NOTICE] Standby node correctly registered for cluster pg_cluster with id 2 (conninfo: host=pgnode2 user=repngr dbname=repmgr)
 
