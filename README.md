@@ -36,7 +36,7 @@ On both nodes as the postgres user.
 		# authorized_keys and id_rsa should have 600 perms.
 
     # Create a repmgr directory for various configs and scripts
-		mkdir -p /var/lib/postgres/repmgr/
+		mkdir -p /var/lib/postgresql/repmgr/
 
 Test the ssh keys out. It should log you in without prompting for a password.
 
@@ -85,7 +85,7 @@ Set parameters similar to the following at the bottom of the /var/lib/pgsql/9.4/
     checkpoint_segments = 32
     checkpoint_completion_target = 0.7
     archive_mode = on
-    archive_command = '/var/lib/postgres/repmgr/ship_logs.sh'
+    archive_command = '/var/lib/postgresql/repmgr/ship_logs.sh'
     max_wal_senders = 3
     wal_keep_segments = 5000
     wal_sender_timeout = 1s
@@ -163,7 +163,7 @@ Create the ship_logs.sh script for shipping WAL files off to the slave.
 
 ### repmgr.conf
 
-Create the following file to configure the repmgr: /var/lib/postgres/repmgr/repmgr.conf
+Create the following file to configure the repmgr: /var/lib/postgresql/repmgr/repmgr.conf
 
     cluster=pg_cluster
     node=1
@@ -174,12 +174,12 @@ Create the following file to configure the repmgr: /var/lib/postgres/repmgr/repm
     reconnect_attempts=2
     reconnect_interval=2
     failover=manual
-    promote_command='/usr/pgsql-9.4/bin/repmgr standby promote -f /var/lib/postgres/repmgr/repmgr.conf'
-    follow_command='/usr/pgsql-9.4/bin/repmgr standby follow -f /var/lib/postgres/repmgr/repmgr.conf'
+    promote_command='/usr/pgsql-9.4/bin/repmgr standby promote -f /var/lib/postgresql/repmgr/repmgr.conf'
+    follow_command='/usr/pgsql-9.4/bin/repmgr standby follow -f /var/lib/postgresql/repmgr/repmgr.conf'
 
 Change ownership of the file to postgres
 
-    sudo chown -R postgres.postgres /var/lib/postgres/repmgr/
+    sudo chown -R postgres.postgres /var/lib/postgresql/repmgr/
 
 ### Configure firewall
 
@@ -203,7 +203,7 @@ We need to tell repmgr that pgnode1 is the master node currently.
 
     sudo -i
     su postgres -
-    /usr/pgsql-9.4/bin/repmgr -f /var/lib/postgres/repmgr/repmgr.conf master register
+    /usr/pgsql-9.4/bin/repmgr -f /var/lib/postgresql/repmgr/repmgr.conf master register
 
 You should see a info message similar to this.
 
@@ -231,7 +231,7 @@ If you need to repeat this step due to errors. Delete the files in the PGDATA di
 
 ### repmgr.conf
 
-Create the following file to configure the repmgr: /var/lib/postgres/repmgr/repmgr.conf
+Create the following file to configure the repmgr: /var/lib/postgresql/repmgr/repmgr.conf
 
     cluster=pg_cluster
     node=2
@@ -242,18 +242,18 @@ Create the following file to configure the repmgr: /var/lib/postgres/repmgr/repm
     reconnect_attempts=2
     reconnect_interval=2
     failover=manual
-    promote_command='/usr/pgsql-9.4/bin/repmgr standby promote -f /var/lib/postgres/repmgr/repmgr.conf'
-    follow_command='/usr/pgsql-9.4/bin/repmgr standby follow -f /var/lib/postgres/repmgr/repmgr.conf'
+    promote_command='/usr/pgsql-9.4/bin/repmgr standby promote -f /var/lib/postgresql/repmgr/repmgr.conf'
+    follow_command='/usr/pgsql-9.4/bin/repmgr standby follow -f /var/lib/postgresql/repmgr/repmgr.conf'
 
 Change ownership of the file to postgres
 
-    sudo chown -R postgres.postgres /var/lib/postgres/repmgr/
+    sudo chown -R postgres.postgres /var/lib/postgresql/repmgr/
 
 ### Register the slave with repmgr
 
     sudo -i
     su postgres -
-    /usr/pgsql-9.4/bin/repmgr -f /var/lib/postgres/repmgr/repmgr.conf standby register
+    /usr/pgsql-9.4/bin/repmgr -f /var/lib/postgresql/repmgr/repmgr.conf standby register
 
 The above command should output a message similar to:
 
