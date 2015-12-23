@@ -18,6 +18,7 @@ This tutorial deploys onto two Centos 7 hosts:
     yum -y localinstall http://yum.postgresql.org/9.4/redhat/rhel-7-x86_64/pgdg-centos94-9.4-1.noarch.rpm
     yum -y install postgresql94-server postgresql94-devel
     yum install -y http://yum.postgresql.org/9.4/redhat/rhel-7-x86_64/repmgr94-3.0.2-1.rhel7.x86_64.rpm
+		# yum install -y http://yum.postgresql.org/9.4/redhat/rhel-6-x86_64/repmgr94-3.0.2-1.rhel6.x86_64.rpm
    
 
 ## Postgres User
@@ -27,16 +28,16 @@ The postgres users on both nodes will require password less ssh logins between t
 On both nodes as the postgres user.
 
     su postgres -
-		ssh-keygen
-		ssh-copy-id postgres@pgnode2  # And pgnode1 on the second node.
-		ls -ld ~/.ssh/
-		ls -al ~/.ssh/
-		chmod 600 ~/.ssh/
-		# If any ssh files are world or group writable fix those.
-		# authorized_keys and id_rsa should have 600 perms.
-
+    ssh-keygen
+    ssh-copy-id postgres@pgnode2  # And pgnode1 on the second node.
+    ls -ld ~/.ssh/
+    ls -al ~/.ssh/
+    chmod 600 ~/.ssh/
+    # If any ssh files are world or group writable fix those.
+    # authorized_keys and id_rsa should have 600 perms.
+    
     # Create a repmgr directory for various configs and scripts
-		mkdir -p /var/lib/postgresql/repmgr/
+    mkdir -p /var/lib/postgresql/repmgr/
 
 Test the ssh keys out. It should log you in without prompting for a password.
 
@@ -111,7 +112,6 @@ Set parameters similar to the following at the bottom of the /var/lib/pgsql/9.4/
     lc_numeric = 'en_US.UTF-8'
     lc_time = 'en_US.UTF-8'
     default_text_search_config = 'pg_catalog.english'
-		shared_preload_libraries = 'repmgr_funcs'
 
 Use http://pgtune.leopard.in.ua/ to tune PG to your connection and hardware needs.
 
@@ -161,6 +161,10 @@ Create the ship_logs.sh script for shipping WAL files off to the slave.
       fi
     fi
 
+Make sure this script has execute permissions.
+
+    sudo chmod +x /var/lib/postgresql/repmgr/ship_logs.sh
+
 ### repmgr.conf
 
 Create the following file to configure the repmgr: /var/lib/postgresql/repmgr/repmgr.conf
@@ -173,7 +177,7 @@ Create the following file to configure the repmgr: /var/lib/postgresql/repmgr/re
     master_response_timeout=5
     reconnect_attempts=2
     reconnect_interval=2
-    failover=manual
+    failover=automatic
     promote_command='/usr/pgsql-9.4/bin/repmgr standby promote -f /var/lib/postgresql/repmgr/repmgr.conf'
     follow_command='/usr/pgsql-9.4/bin/repmgr standby follow -f /var/lib/postgresql/repmgr/repmgr.conf'
 
@@ -219,6 +223,7 @@ PG software should be installed. Postgres user should have password less ssh acc
 We need to pull the data from the Master so that the slave can follow WAL segments updates.
 
     sudo -i
+		systemctl stop postgresql-9.4
     su postgres -
     rm -rf /var/lib/pgsql/9.4/data/*
     /usr/pgsql-9.4/bin/repmgr -D /var/lib/pgsql/9.4/data -d repmgr -p 5432 -U repmgr -R postgres standby clone pgnode1
@@ -228,6 +233,10 @@ This step should finish with a message similar to:
     [NOTICE] repmgr standby clone complete
 
 If you need to repeat this step due to errors. Delete the files in the PGDATA dir and try again.
+
+After the step succeeds start postgres on the slave.
+
+     sudo systemctl start postgresql-9.4
 
 ### repmgr.conf
 
@@ -241,7 +250,7 @@ Create the following file to configure the repmgr: /var/lib/postgresql/repmgr/re
     master_response_timeout=5
     reconnect_attempts=2
     reconnect_interval=2
-    failover=manual
+    failover=automatic
     promote_command='/usr/pgsql-9.4/bin/repmgr standby promote -f /var/lib/postgresql/repmgr/repmgr.conf'
     follow_command='/usr/pgsql-9.4/bin/repmgr standby follow -f /var/lib/postgresql/repmgr/repmgr.conf'
 
@@ -258,4 +267,54 @@ Change ownership of the file to postgres
 The above command should output a message similar to:
 
     [NOTICE] Standby node correctly registered for cluster pg_cluster with id 2 (conninfo: host=pgnode2 user=repngr dbname=repmgr)
+
+
+### Test the replication
+
+#### Back to the master
+
+     psql test
+		 CREATE ROLE appuser LOGIN ENCRYPTED PASSWORD 'password';
+		 CREATE DATABASE test OWNER appuser;
+
+#### Slave should receive the replicated data.
+
+Data should appear on the slave.
+
+#### Verify the slave is read-only
+
+     psql -U appuser test
+		 CREATE TABLE dual ( val CHAR(80) );
+		 ERROR: cannot execute CREATE TABLE in a read-only transaction
+
+Check to see the cluster status
+
+     sudo -i
+     su postgres -
+     /usr/pgsql-9.4/bin/repmgr -f /var/lib/postgresql/repmgr/repmgr.conf cluster show
+
+## Manual Failover
+
+If you identify the master as having failed. You may promote the slave to master.
+
+Login to the slave pgnode2.
+
+    sudo -i
+    su postgres -
+    /usr/pgsql-9.4/bin/repmgr standby promote -f /var/lib/postgresql/repmgr/repmgr.conf
+
+The slave will now accept transactions and act as the master.
+
+## Automated Failover
+
+Run repmgrd to monitor the cluster and automate the failover on the slave.
+
+    # execute on pgnode2
+    sudo -i
+    su postgres -
+    /usr/pgsql-9.4/bin/repmgrd --verbose -f /var/lib/postgresql/repmgr/repmgr.conf -m
+		
+
+
+
 
