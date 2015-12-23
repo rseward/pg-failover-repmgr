@@ -166,16 +166,16 @@ Create the ship_logs.sh script for shipping WAL files off to the slave.
 Create the following file to configure the repmgr: /var/lib/postgres/repmgr/repmgr.conf
 
     cluster=pg_cluster
-		node=1
-		node_name=pgnode1
-		conninfo='host=pgnode1 user=repmgr dbname=repmgr'
-		pg_bindir=/usr/pgsql-9.4/bin/
-		master_response_timeout=5
-		reconnect_attempts=2
-		reconnect_interval=2
-		failover=manual
-		promote_command='/usr/pgsql-9.4/bin/repmgr standby promote -f /var/lib/postgres/repmgr/repmgr.conf'
-		follow_command='/usr/pgsql-9.4/bin/repmgr standby follow -f /var/lib/postgres/repmgr/repmgr.conf'
+    node=1
+    node_name=pgnode1
+    conninfo='host=pgnode1 user=repmgr dbname=repmgr'
+    pg_bindir=/usr/pgsql-9.4/bin/
+    master_response_timeout=5
+    reconnect_attempts=2
+    reconnect_interval=2
+    failover=manual
+    promote_command='/usr/pgsql-9.4/bin/repmgr standby promote -f /var/lib/postgres/repmgr/repmgr.conf'
+    follow_command='/usr/pgsql-9.4/bin/repmgr standby follow -f /var/lib/postgres/repmgr/repmgr.conf'
 
 Change ownership of the file to postgres
 
@@ -186,24 +186,24 @@ Change ownership of the file to postgres
 These commands will need to be executed on both pg nodes.
 
     sudo firewall-cmd --permanent --zone=public --add-service=postgresql
-		sudo systemctl reload firewalld
+    sudo systemctl reload firewalld
 
 ### Create required database users
 
 
     sudo -i
-		su postgres -
-		psql
-		postgres# CREATE ROLE repmgr SUPERUSER LOGIN ENCRYPTED PASSWORD 'password';
-		postgres# CREATE DATABASE repmgr OWNER repmgr;
+    su postgres -
+    psql
+    postgres# CREATE ROLE repmgr SUPERUSER LOGIN ENCRYPTED PASSWORD 'password';
+    postgres# CREATE DATABASE repmgr OWNER repmgr;
 
 ### Register the master node
 
 We need to tell repmgr that pgnode1 is the master node currently.
 
     sudo -i
-		su postgres -
-		/usr/pgsql-9.4/bin/repmgr -f /var/lib/postgres/repmgr/repmgr.conf master register
+    su postgres -
+    /usr/pgsql-9.4/bin/repmgr -f /var/lib/postgres/repmgr/repmgr.conf master register
 
 You should see a info message similar to this.
 
@@ -219,9 +219,9 @@ PG software should be installed. Postgres user should have password less ssh acc
 We need to pull the data from the Master so that the slave can follow WAL segments updates.
 
     sudo -i
-		su postgres -
-		rm -rf /var/lib/pgsql/9.4/data/*
-		/usr/pgsql-9.4/bin/repmgr -D /var/lib/pgsql/9.4/data -d repmgr -p 5432 -U repmgr -R postgres standby clone pgnode1
+    su postgres -
+    rm -rf /var/lib/pgsql/9.4/data/*
+    /usr/pgsql-9.4/bin/repmgr -D /var/lib/pgsql/9.4/data -d repmgr -p 5432 -U repmgr -R postgres standby clone pgnode1
 
 This step should finish with a message similar to:
 
@@ -234,16 +234,16 @@ If you need to repeat this step due to errors. Delete the files in the PGDATA di
 Create the following file to configure the repmgr: /var/lib/postgres/repmgr/repmgr.conf
 
     cluster=pg_cluster
-		node=2
-		node_name=pgnode2
-		conninfo='host=pgnode2 user=repmgr dbname=repmgr'
-		pg_bindir=/usr/pgsql-9.4/bin/
-		master_response_timeout=5
-		reconnect_attempts=2
-		reconnect_interval=2
-		failover=manual
-		promote_command='/usr/pgsql-9.4/bin/repmgr standby promote -f /var/lib/postgres/repmgr/repmgr.conf'
-		follow_command='/usr/pgsql-9.4/bin/repmgr standby follow -f /var/lib/postgres/repmgr/repmgr.conf'
+    node=2
+    node_name=pgnode2
+    conninfo='host=pgnode2 user=repmgr dbname=repmgr'
+    pg_bindir=/usr/pgsql-9.4/bin/
+    master_response_timeout=5
+    reconnect_attempts=2
+    reconnect_interval=2
+    failover=manual
+    promote_command='/usr/pgsql-9.4/bin/repmgr standby promote -f /var/lib/postgres/repmgr/repmgr.conf'
+    follow_command='/usr/pgsql-9.4/bin/repmgr standby follow -f /var/lib/postgres/repmgr/repmgr.conf'
 
 Change ownership of the file to postgres
 
@@ -252,8 +252,8 @@ Change ownership of the file to postgres
 ### Register the slave with repmgr
 
     sudo -i
-		su postgres -
-		/usr/pgsql-9.4/bin/repmgr -f /var/lib/postgres/repmgr/repmgr.conf standby register
+    su postgres -
+    /usr/pgsql-9.4/bin/repmgr -f /var/lib/postgres/repmgr/repmgr.conf standby register
 
 The above command should output a message similar to:
 
