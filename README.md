@@ -8,12 +8,15 @@ This tutorial draws inspiration from the following pages:
 	- jensd.be/591/linux/setup-a-redundant-postgresql-database-with-repmgr-and-pgpool
 
 This tutorial deploys onto two Centos 7 hosts:
-  - pgnode1 - Initially the master node.
-	- pgnode2 - Initiall the slave node.
+  - pgnode1 - with an IP address of 192.168.1.101; Initially the master node.
+  - pgnode2 - with an IP address of 192.168.1.102; Initiall the slave node.
+
+Because repmgrd did not serve our needs. It also depends on this project to automate the failover:
+  - https://github.com/rseward/pg_monitor
 
 # Requirements
 
-## Install Postgres Database Group Repo to install the PGDG rpms.
+## Install Postgres Database Group Repo to install the required PGDG rpms.
 
     yum -y localinstall http://yum.postgresql.org/9.4/redhat/rhel-7-x86_64/pgdg-centos94-9.4-1.noarch.rpm
     yum -y install postgresql94-server postgresql94-devel
@@ -307,6 +310,10 @@ The slave will now accept transactions and act as the master.
 
 ## Automated Failover
 
+### repmgrd
+
+repmgr provides a monitor, repmgr. In theory it should monitor the cluster and automate the promotion of the slave to the master database. However in practice it threw many errors for me and ulitmately proved to be too unreliable in it's current state.
+
 Run repmgrd to monitor the cluster and automate the failover on the slave.
 
     # execute on pgnode2
@@ -314,6 +321,14 @@ Run repmgrd to monitor the cluster and automate the failover on the slave.
     su postgres -
     /usr/pgsql-9.4/bin/repmgrd --verbose -f /var/lib/postgresql/repmgr/repmgr.conf -m
 		
+### pg_monitor
+
+Because of repmgr's current instability, I was forced to write this simplistic script pg_monitor to monitor the cluster and orchestrate the promotion of the slave to the master.
+
+Follow the configuration of pg_monitor documented here:
+  - https://github.com/rseward/pg_monitor
+
+to complete the configuration of an automated failover solution.
 
 
 
