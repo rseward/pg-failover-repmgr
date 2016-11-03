@@ -312,7 +312,7 @@ The slave will now accept transactions and act as the master.
 
 ### repmgrd
 
-repmgr provides a monitor, repmgr. In theory it should monitor the cluster and automate the promotion of the slave to the master database. However in practice it threw many errors for me and ulitmately proved to be too unreliable in it's current state.
+repmgr provides a monitor program, repmgrd. In theory it should monitor the cluster and automate the promotion of the slave to the master database. However in practice it threw many errors for me and ulitmately proved to be too unreliable in it's current state.
 
 Run repmgrd to monitor the cluster and automate the failover on the slave.
 
