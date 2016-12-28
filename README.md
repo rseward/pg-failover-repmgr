@@ -53,9 +53,11 @@ If you are able to ssh freely between the nodes as postgres then you are ready f
 
 ## The Master Database
 
+Initialize the repmgr database to track the replication status of each node.
+
     sudo -i
-		su postgres -
-		/usr/pgsql-9.4/bin/postgresql94-setup initdb
+    su postgres -
+    /usr/pgsql-9.4/bin/postgresql94-setup initdb
 		
 
 ### Configure the Host Base Access rules to the database.
